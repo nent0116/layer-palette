@@ -154,7 +154,11 @@ export function DetailPanel({ selectedNode, onNodeUpdate }: DetailPanelProps) {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="ノードのタイトルを入力"
                   className="border-2 border-emerald-200 focus:border-emerald-500 bg-white/80"
+                  aria-describedby="title-help"
                 />
+                <span id="title-help" className="sr-only">
+                  ノードの表示名を設定します
+                </span>
               </div>
 
               <div className="space-y-2">
@@ -187,7 +191,11 @@ export function DetailPanel({ selectedNode, onNodeUpdate }: DetailPanelProps) {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="メモを入力してください..."
                 className="min-h-[300px] border-2 border-emerald-200 focus:border-emerald-500 bg-white/80 resize-none"
+                aria-describedby="notes-help"
               />
+              <span id="notes-help" className="sr-only">
+                ノードに関する詳細情報やメモを記載できます
+              </span>
             </CardContent>
           </Card>
         </TabsContent>

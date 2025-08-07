@@ -11,7 +11,7 @@ export interface LayerNode {
   children: LayerNode[]
   parentId?: string
   order: number
-  level?: number // Add level property
+  level?: number
 }
 
 export interface LayerMap {
@@ -28,6 +28,8 @@ interface LayerPaletteState {
   currentMap: LayerMap | null
   history: LayerMap[]
   historyIndex: number
+  error: string | null
+  isLoading: boolean
 }
 
 type LayerPaletteAction =
@@ -42,16 +44,26 @@ type LayerPaletteAction =
   | { type: "UNDO" }
   | { type: "REDO" }
   | { type: "IMPORT_MAP"; payload: LayerMap }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_LOADING"; payload: boolean }
 
 const initialState: LayerPaletteState = {
   maps: [],
   currentMap: null,
   history: [],
   historyIndex: -1,
+  error: null,
+  isLoading: false,
 }
 
+// より安全なID生成関数
 function generateId(): string {
-  return Math.random().toString(36).substr(2, 9)
+  // crypto.randomUUID()が利用可能な場合は使用、そうでなければフォールバック
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  // フォールバック: タイムスタンプ + ランダム数
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
 // Define hierarchical colors for different templates
@@ -84,7 +96,7 @@ const templateColors = {
     level3: "#EF4444",
     level4: "#8B5CF6",
   },
-}
+} as const
 
 function getColorForLevel(template: LayerMap["template"], level: number): string {
   const colors = templateColors[template]
@@ -609,6 +621,21 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
         currentMap: updatedMap,
         history: [updatedMap],
         historyIndex: 0,
+        error: null,
+      }
+    }
+
+    case "SET_ERROR": {
+      return {
+        ...state,
+        error: action.payload,
+      }
+    }
+
+    case "SET_LOADING": {
+      return {
+        ...state,
+        isLoading: action.payload,
       }
     }
 

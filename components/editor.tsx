@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { useLayerPalette, getColorForLevel } from "@/contexts/layer-palette-context"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Eye, Download, Undo, Redo, Save, FileSpreadsheet, FileText } from 'lucide-react'
@@ -47,7 +47,9 @@ export function Editor({ mapId }: EditorProps) {
     return undefined
   }, [])
 
-  const selectedNode = selectedNodeId ? findNodeById(state.currentMap?.rootNodes || [], selectedNodeId) : undefined
+  const selectedNode = useMemo(() => {
+    return selectedNodeId ? findNodeById(state.currentMap?.rootNodes || [], selectedNodeId) : undefined
+  }, [selectedNodeId, state.currentMap?.rootNodes, findNodeById])
 
   // Callback to receive export data from LivePreview - memoized to prevent infinite loops
   const handleExportDataReady = useCallback((data: any) => {
@@ -75,6 +77,7 @@ export function Editor({ mapId }: EditorProps) {
         title: "新しいノード",
         backgroundColor: getColorForLevel(state.currentMap.template, newNodeLevel),
         notes: "",
+        children: [],
       }
       dispatch({ type: "ADD_NODE", payload: { parentId, node: newNode } })
       toast({
@@ -82,7 +85,7 @@ export function Editor({ mapId }: EditorProps) {
         description: parentId ? "子ノードとして追加されました" : "ルートレベルに追加されました",
       })
     },
-    [dispatch, toast, state.currentMap, findNodeById],
+    [dispatch, toast, state.currentMap?.template, findNodeById],
   )
 
   const handleNodeUpdate = useCallback(
@@ -123,11 +126,11 @@ export function Editor({ mapId }: EditorProps) {
         })
       }
     },
-    [dispatch, findNodeById, state.currentMap?.rootNodes, toast, state.currentMap],
+    [dispatch, findNodeById, state.currentMap?.rootNodes, toast, state.currentMap?.template],
   )
 
   const handleNodeMove = useCallback(
-    (nodeId: string, newParentId?: string, newOrder = 0) => {
+    (nodeId: string, newOrder: number, newParentId?: string) => {
       dispatch({ type: "MOVE_NODE", payload: { nodeId, newParentId, newOrder } })
       toast({
         title: "ノードを移動しました",
@@ -187,7 +190,7 @@ export function Editor({ mapId }: EditorProps) {
           const grandparentContext = findGrandparent(state.currentMap.rootNodes, parentId)
           if (grandparentContext) {
             const newOrder = grandparentContext.parentSiblings.length
-            handleNodeMove(nodeId, grandparentContext.grandparentId, newOrder)
+            handleNodeMove(nodeId, newOrder, grandparentContext.grandparentId)
             
             toast({
               title: "階層を上げました",
@@ -207,7 +210,7 @@ export function Editor({ mapId }: EditorProps) {
         if (currentIndex > 0) {
           const newParent = siblings[currentIndex - 1]
           const newOrder = newParent.children.length
-          handleNodeMove(nodeId, newParent.id, newOrder)
+          handleNodeMove(nodeId, newOrder, newParent.id)
           
           toast({
             title: "階層を下げました",

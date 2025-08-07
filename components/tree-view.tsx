@@ -33,7 +33,7 @@ interface TreeViewProps {
   onNodeAdd: (parentId?: string) => void
   onNodeDelete: (nodeId: string) => void
   onNodeCopy: (nodeId: string) => void
-  onNodeMove: (nodeId: string, newParentId?: string, newOrder: number) => void
+  onNodeMove: (nodeId: string, newOrder: number, newParentId?: string) => void
   onNodeChangeLevel: (nodeId: string, direction: "promote" | "demote") => void
 }
 
@@ -115,6 +115,22 @@ function SortableTreeItem({
             }`}
             style={{ marginLeft: `${level * 20}px` }}
             onClick={() => onNodeSelect(node.id)}
+            role="treeitem"
+            aria-expanded={node.children.length > 0 ? isExpanded : undefined}
+            aria-selected={isSelected}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onNodeSelect(node.id)
+              } else if (e.key === 'ArrowRight' && node.children.length > 0 && !isExpanded) {
+                e.preventDefault()
+                setIsExpanded(true)
+              } else if (e.key === 'ArrowLeft' && node.children.length > 0 && isExpanded) {
+                e.preventDefault()
+                setIsExpanded(false)
+              }
+            }}
           >
             {/* Drag Handle */}
             <div
@@ -319,7 +335,7 @@ export function TreeView({
 
         if (activeResult && overResult) {
           // Move the node to the same parent as the target node
-          onNodeMove(active.id as string, overResult.parentId, overResult.index)
+          onNodeMove(active.id as string, overResult.index, overResult.parentId)
         }
       }
     },
@@ -353,7 +369,7 @@ export function TreeView({
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={getAllNodeIds(nodes)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
+          <div className="space-y-3" role="tree" aria-label="階層構造ツリー">
             {nodes.map((node) => (
               <SortableTreeItem
                 key={node.id}

@@ -133,75 +133,75 @@ function calculateWBSCellStyles(flatNodes: FlatNode[], totalRows: number, totalC
     }
   }
 
-  // 横方向の背景着色ロジック（Sitemapテンプレートと同様）- A列～C列のみ
-  for (let row = 0; row <= maxRow; row++) {
-    const firstValueCol = colmax[row]
-    if (firstValueCol !== undefined && firstValueCol <= 2) { // A列～C列のみ（0-2）
-      // テキストがあるセルとその右側のセルには、ヘッダー色と同じ薄い色を使用
-      let headerColor: string
-      
-      // レベルに応じてヘッダー色を決定
-      if (firstValueCol === 0) {
-        headerColor = "#3B82F640" // 親タスクの色の薄い版
-      } else if (firstValueCol === 1) {
-        headerColor = "#06B6D440" // 子タスクの色の薄い版
-      } else if (firstValueCol === 2) {
-        headerColor = "#10B98140" // 孫タスクの色の薄い版
-      } else {
-        headerColor = "#f8fafc" // デフォルトの薄いグレー
-      }
-      
-      // テキストがあるセルに背景色を適用（ヘッダー色と同じ薄い色）
-      const textCellKey = `${row + 1}-${firstValueCol}`
-      if (!cellStyles[textCellKey]) cellStyles[textCellKey] = {}
-      cellStyles[textCellKey].backgroundColor = headerColor
-      
-      // テキストより右のセルに同じ色を適用（ヘッダー色と同じ薄い色）- C列までのみ
-      if (firstValueCol < 2) { // C列まで（0-2）
-        for (let col = firstValueCol + 1; col <= 2; col++) {
-          const cellKey = `${row + 1}-${col}`
-          if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
-          cellStyles[cellKey].backgroundColor = headerColor
-          
-          // 上下の枠線
-          if (!cellStyles[cellKey].borders) cellStyles[cellKey].borders = {}
-          cellStyles[cellKey].borders.top = true
-          cellStyles[cellKey].borders.bottom = true
+    // 横方向の背景着色ロジック（Sitemapテンプレートと同様）- A列～C列のみ
+    for (let row = 0; row <= maxRow; row++) {
+      const firstValueCol = colmax[row]
+      if (firstValueCol !== undefined && firstValueCol <= 2) { // A列～C列のみ（0-2）
+        // テキストがあるセルとその右側のセルには、ヘッダー色と同じ薄い色を使用
+        let headerColor: string
+        
+        // レベルに応じてヘッダー色を決定
+        if (firstValueCol === 0) {
+          headerColor = "#3B82F640" // 親タスクの色の薄い版
+        } else if (firstValueCol === 1) {
+          headerColor = "#06B6D440" // 子タスクの色の薄い版
+        } else if (firstValueCol === 2) {
+          headerColor = "#10B98140" // 孫タスクの色の薄い版
+        } else {
+          headerColor = "#f8fafc" // デフォルトの薄いグレー
         }
-      }
-
-      // テキストがあるセルに上と左の枠線
-      if (!cellStyles[textCellKey].borders) cellStyles[textCellKey].borders = {}
-      cellStyles[textCellKey].borders.top = true
-      cellStyles[textCellKey].borders.left = true
-
-      // テキストより左のセルに内部垂直枠線
-      if (firstValueCol > 0) {
-        for (let col = 0; col < firstValueCol; col++) {
-          const cellKey = `${row + 1}-${col}`
-          if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
-          if (!cellStyles[cellKey].borders) cellStyles[cellKey].borders = {}
-          cellStyles[cellKey].borders.right = true
+        
+        // テキストがあるセルに背景色を適用（ヘッダー色と同じ薄い色）
+        const textCellKey = `${row + 1}-${firstValueCol}`
+        if (!cellStyles[textCellKey]) cellStyles[textCellKey] = {}
+        cellStyles[textCellKey].backgroundColor = headerColor
+        
+        // テキストより右のセルに同じ色を適用（ヘッダー色と同じ薄い色）- C列までのみ
+        if (firstValueCol < 2) { // C列まで（0-2）
+          for (let col = firstValueCol + 1; col <= 2; col++) {
+            const cellKey = `${row + 1}-${col}`
+            if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
+            cellStyles[cellKey].backgroundColor = headerColor
+            
+            // 上下の枠線
+            if (!cellStyles[cellKey].borders) cellStyles[cellKey].borders = {}
+            cellStyles[cellKey].borders.top = true
+            cellStyles[cellKey].borders.bottom = true
+          }
         }
-      }
-    }
-  }
 
-  // 担当者名、開始日、終了日、ステータス、進捗率の列（D2からH列まで）に罫線を適用
-  for (let row = 0; row <= maxRow; row++) {
-    for (let col = 3; col < 8; col++) {
-      const cellKey = `${row + 1}-${col}`
-      if (!cellStyles[cellKey]) {
-        cellStyles[cellKey] = {
-          backgroundColor: "#f8fafc", // 薄いグレー
-          borders: { top: true, left: true, bottom: true, right: true }
+        // テキストがあるセルに上と左の枠線
+        if (!cellStyles[textCellKey].borders) cellStyles[textCellKey].borders = {}
+        cellStyles[textCellKey].borders.top = true
+        cellStyles[textCellKey].borders.left = true
+
+        // テキストより左のセルに内部垂直枠線
+        if (firstValueCol > 0) {
+          for (let col = 0; col < firstValueCol; col++) {
+            const cellKey = `${row + 1}-${col}`
+            if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
+            if (!cellStyles[cellKey].borders) cellStyles[cellKey].borders = {}
+            cellStyles[cellKey].borders.right = true
+          }
         }
       }
     }
-  }
 
-  return cellStyles
-}
+    // 担当者名、開始日、終了日、ステータス、進捗率の列（D2からH列まで）に罫線を適用
+    for (let row = 0; row <= maxRow; row++) {
+      for (let col = 3; col < 8; col++) {
+        const cellKey = `${row + 1}-${col}`
+        if (!cellStyles[cellKey]) {
+          cellStyles[cellKey] = {
+            backgroundColor: "#f8fafc", // 薄いグレー
+            borders: { top: true, left: true, bottom: true, right: true }
+          }
+        }
+      }
+    }
+
+    return cellStyles
+  }
 
 function flattenNodes(nodes: LayerNode[], level = 0, startIndex = 0): FlatNode[] {
   let currentIndex = startIndex

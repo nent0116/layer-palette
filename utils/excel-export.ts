@@ -422,7 +422,8 @@ export async function exportToExcel(data: ExportData) {
     
   } catch (error) {
     console.error('Excel export error:', error)
-    throw new Error('Excelファイルのエクスポートに失敗しました')
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    throw new Error(`Excelファイルのエクスポートに失敗しました: ${errorMessage}`)
   }
 }
 
@@ -485,6 +486,7 @@ export function exportToCSV(data: ExportData) {
     
   } catch (error) {
     console.error('CSV export error:', error)
-    throw new Error('CSVファイルのエクスポートに失敗しました')
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    throw new Error(`CSVファイルのエクスポートに失敗しました: ${errorMessage}`)
   }
 }

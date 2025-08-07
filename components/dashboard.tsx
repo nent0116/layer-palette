@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Plus, Edit, Trash2, FileSpreadsheet } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,11 +16,12 @@ export function Dashboard() {
   const router = useRouter()
   const { toast } = useToast()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [pendingMap, setPendingMap] = useState<{ name: string; template: string } | null>(null)
+  const previousMapsLength = useRef(state.maps.length)
 
   const handleCreateMap = (name: string, template: "sitemap" | "wbs" | "content-calendar" | "custom") => {
+    setPendingMap({ name, template })
     dispatch({ type: "CREATE_MAP", payload: { name, template } })
-    const newMapId = state.maps[state.maps.length]?.id || "new"
-    router.push(`/edit/${newMapId}`)
     toast({
       title: "新しいマップを作成しました",
       description: `${name} が作成されました`,
@@ -47,6 +48,20 @@ export function Dashboard() {
       description: "Excel インポート機能は開発中です",
     })
   }
+
+  // 新しいマップが作成されたらナビゲーションする
+  useEffect(() => {
+    if (pendingMap && state.maps.length > previousMapsLength.current) {
+      const newMap = state.maps.find(map => 
+        map.name === pendingMap.name && map.template === pendingMap.template
+      )
+      if (newMap) {
+        router.push(`/edit/${newMap.id}`)
+        setPendingMap(null)
+      }
+    }
+    previousMapsLength.current = state.maps.length
+  }, [state.maps, pendingMap, router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6">
