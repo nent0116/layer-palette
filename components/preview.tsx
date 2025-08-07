@@ -1,11 +1,19 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useLayerPalette } from "@/contexts/layer-palette-context"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Download, Edit } from "lucide-react"
+import { ArrowLeft, Download, Edit, FileSpreadsheet, FileText } from 'lucide-react'
 import { useRouter } from "next/navigation"
 import { LivePreview } from "@/components/live-preview"
+import { useToast } from "@/hooks/use-toast"
+import { exportToExcel, exportToCSV } from "@/utils/excel-export"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface PreviewProps {
   mapId: string
@@ -14,6 +22,8 @@ interface PreviewProps {
 export function Preview({ mapId }: PreviewProps) {
   const { state, dispatch } = useLayerPalette()
   const router = useRouter()
+  const { toast } = useToast()
+  const [exportData, setExportData] = useState<any>(null)
 
   useEffect(() => {
     if (mapId) {
@@ -22,6 +32,68 @@ export function Preview({ mapId }: PreviewProps) {
   }, [mapId, dispatch])
 
   const currentMap = state.currentMap
+
+  // Callback to receive export data from LivePreview
+  const handleExportDataReady = useCallback((data: any) => {
+    // Add the current map name to the export data
+    const updatedData = {
+      ...data,
+      mapName: currentMap?.name || "LayerPalette Map"
+    }
+    setExportData(updatedData)
+  }, [currentMap?.name])
+
+  const handleExportExcel = () => {
+    if (!exportData) {
+      toast({
+        title: "エクスポートエラー",
+        description: "プレビューデータが見つかりません。しばらく待ってから再試行してください。",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      exportToExcel(exportData)
+      toast({
+        title: "Excelエクスポート完了",
+        description: `${exportData.mapName}.xlsx がダウンロードされました`,
+      })
+    } catch (error) {
+      console.error('Export error:', error)
+      toast({
+        title: "エクスポートエラー",
+        description: "Excelファイルのエクスポートに失敗しました",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleExportCSV = () => {
+    if (!exportData) {
+      toast({
+        title: "エクスポートエラー",
+        description: "プレビューデータが見つかりません。しばらく待ってから再試行してください。",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      exportToCSV(exportData)
+      toast({
+        title: "CSVエクスポート完了",
+        description: `${exportData.mapName}.csv がダウンロードされました`,
+      })
+    } catch (error) {
+      console.error('CSV export error:', error)
+      toast({
+        title: "エクスポートエラー",
+        description: "CSVファイルのエクスポートに失敗しました",
+        variant: "destructive",
+      })
+    }
+  }
 
   if (!currentMap) {
     return (
@@ -58,13 +130,29 @@ export function Preview({ mapId }: PreviewProps) {
               <Edit className="w-4 h-4 mr-2" />
               編集
             </Button>
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              エクスポート
-            </Button>
+            
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  エクスポート
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="animate-scale-in">
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+                  Excel形式 (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                  CSV形式 (.csv)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -75,6 +163,7 @@ export function Preview({ mapId }: PreviewProps) {
           nodes={currentMap.rootNodes}
           onNodeSelect={() => {}} // No selection in preview mode
           template={currentMap.template}
+          onExportDataReady={handleExportDataReady}
         />
       </div>
     </div>

@@ -3,13 +3,20 @@
 import { useEffect, useState, useCallback } from "react"
 import { useLayerPalette, getColorForLevel } from "@/contexts/layer-palette-context"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Eye, Download, Undo, Redo, Save } from "lucide-react"
+import { ArrowLeft, Eye, Download, Undo, Redo, Save, FileSpreadsheet, FileText } from 'lucide-react'
 import { useRouter } from "next/navigation"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 import { TreeView } from "@/components/tree-view"
 import { DetailPanel } from "@/components/detail-panel"
 import { LivePreview } from "@/components/live-preview"
 import { useToast } from "@/hooks/use-toast"
+import { exportToExcel, exportToCSV } from "@/utils/excel-export"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type { LayerNode } from "@/contexts/layer-palette-context"
 
 interface EditorProps {
@@ -22,6 +29,7 @@ export function Editor({ mapId }: EditorProps) {
   const { toast } = useToast()
 
   const [selectedNodeId, setSelectedNodeId] = useState<string>()
+  const [exportData, setExportData] = useState<any>(null)
 
   useEffect(() => {
     if (mapId && mapId !== "new") {
@@ -40,6 +48,16 @@ export function Editor({ mapId }: EditorProps) {
   }, [])
 
   const selectedNode = selectedNodeId ? findNodeById(state.currentMap?.rootNodes || [], selectedNodeId) : undefined
+
+  // Callback to receive export data from LivePreview - memoized to prevent infinite loops
+  const handleExportDataReady = useCallback((data: any) => {
+    // Add the current map name to the export data
+    const updatedData = {
+      ...data,
+      mapName: state.currentMap?.name || "LayerPalette Map"
+    }
+    setExportData(updatedData)
+  }, [state.currentMap?.name])
 
   // Node management functions
   const handleNodeAdd = useCallback(
@@ -144,34 +162,43 @@ export function Editor({ mapId }: EditorProps) {
 
       const { node, parentId, siblings } = context
 
-      if (direction === "promote" && parentId) {
-        // Move node up one level (make it sibling of current parent)
-        const findGrandparent = (
-          nodes: LayerNode[],
-          targetParentId: string,
-        ): { grandparentId?: string; parentSiblings: LayerNode[] } | null => {
-          // Check if target parent is in root
-          if (nodes.some((n) => n.id === targetParentId)) {
-            return { grandparentId: undefined, parentSiblings: nodes }
-          }
-
-          for (const n of nodes) {
-            if (n.children.some((child) => child.id === targetParentId)) {
-              return { grandparentId: n.id, parentSiblings: n.children }
+      if (direction === "promote") {
+        if (parentId) {
+          // Move node up one level (make it sibling of current parent)
+          const findGrandparent = (
+            nodes: LayerNode[],
+            targetParentId: string,
+          ): { grandparentId?: string; parentSiblings: LayerNode[] } | null => {
+            // Check if target parent is in root
+            if (nodes.some((n) => n.id === targetParentId)) {
+              return { grandparentId: undefined, parentSiblings: nodes }
             }
-            const found = findGrandparent(n.children, targetParentId)
-            if (found) return found
-          }
-          return null
-        }
 
-        const grandparentContext = findGrandparent(state.currentMap.rootNodes, parentId)
-        if (grandparentContext) {
-          const newOrder = grandparentContext.parentSiblings.length
-          handleNodeMove(nodeId, grandparentContext.grandparentId, newOrder)
+            for (const n of nodes) {
+              if (n.children.some((child) => child.id === targetParentId)) {
+                return { grandparentId: n.id, parentSiblings: n.children }
+              }
+              const found = findGrandparent(n.children, targetParentId)
+              if (found) return found
+            }
+            return null
+          }
+
+          const grandparentContext = findGrandparent(state.currentMap.rootNodes, parentId)
+          if (grandparentContext) {
+            const newOrder = grandparentContext.parentSiblings.length
+            handleNodeMove(nodeId, grandparentContext.grandparentId, newOrder)
+            
+            toast({
+              title: "階層を上げました",
+              description: `${node.title} の階層が上がりました`,
+            })
+          }
+        } else {
+          // Root node - can't promote further, but show message
           toast({
-            title: "階層を上げました",
-            description: `${node.title} の階層が上がりました`,
+            title: "これ以上階層を上げられません",
+            description: "既に最上位階層です",
           })
         }
       } else if (direction === "demote") {
@@ -181,15 +208,73 @@ export function Editor({ mapId }: EditorProps) {
           const newParent = siblings[currentIndex - 1]
           const newOrder = newParent.children.length
           handleNodeMove(nodeId, newParent.id, newOrder)
+          
           toast({
             title: "階層を下げました",
             description: `${node.title} の階層が下がりました`,
           })
+        } else {
+          toast({
+            title: "階層を下げられません",
+            description: "前に兄弟ノードがありません",
+          })
         }
       }
     },
-    [state.currentMap, handleNodeMove, toast],
+    [state.currentMap, handleNodeMove, toast, findNodeById],
   )
+
+  const handleExportExcel = useCallback(() => {
+    if (!exportData) {
+      toast({
+        title: "エクスポートエラー",
+        description: "プレビューデータが見つかりません。しばらく待ってから再試行してください。",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      exportToExcel(exportData)
+      toast({
+        title: "Excelエクスポート完了",
+        description: `${exportData.mapName}.xlsx がダウンロードされました`,
+      })
+    } catch (error) {
+      console.error('Export error:', error)
+      toast({
+        title: "エクスポートエラー",
+        description: "Excelファイルのエクスポートに失敗しました",
+        variant: "destructive",
+      })
+    }
+  }, [exportData, toast])
+
+  const handleExportCSV = useCallback(() => {
+    if (!exportData) {
+      toast({
+        title: "エクスポートエラー",
+        description: "プレビューデータが見つかりません。しばらく待ってから再試行してください。",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      exportToCSV(exportData)
+      toast({
+        title: "CSVエクスポート完了",
+        description: `${exportData.mapName}.csv がダウンロードされました`,
+      })
+    } catch (error) {
+      console.error('CSV export error:', error)
+      toast({
+        title: "エクスポートエラー",
+        description: "CSVファイルのエクスポートに失敗しました",
+        variant: "destructive",
+      })
+    }
+  }, [exportData, toast])
 
   const handleUndo = useCallback(() => {
     dispatch({ type: "UNDO" })
@@ -330,13 +415,31 @@ export function Editor({ mapId }: EditorProps) {
               <Save className="w-4 h-4 mr-2" />
               保存
             </Button>
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              エクスポート
-            </Button>
+            
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white"
+                  disabled={!exportData}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  エクスポート
+                  {!exportData && <span className="ml-1 text-xs">(準備中)</span>}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="animate-scale-in">
+                <DropdownMenuItem onClick={handleExportExcel} disabled={!exportData}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+                  Excel形式 (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV} disabled={!exportData}>
+                  <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                  CSV形式 (.csv)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -374,6 +477,7 @@ export function Editor({ mapId }: EditorProps) {
               selectedNodeId={selectedNodeId}
               onNodeSelect={setSelectedNodeId}
               template={currentMap.template}
+              onExportDataReady={handleExportDataReady}
             />
           </ResizablePanel>
         </ResizablePanelGroup>

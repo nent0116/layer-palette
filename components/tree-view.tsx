@@ -15,7 +15,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { ChevronRight, ChevronDown, Plus, Trash2, Copy, GripVertical, ArrowRight, ArrowLeft } from "lucide-react"
+import { ChevronRight, ChevronDown, Plus, Trash2, Copy, GripVertical, ArrowRight, ArrowLeft } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import {
   ContextMenu,
@@ -154,20 +154,19 @@ function SortableTreeItem({
 
             {/* Action Buttons */}
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-              {canPromote && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-6 h-6 p-0 hover:bg-blue-100"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handlePromote()
-                  }}
-                  title="階層を上げる"
-                >
-                  <ArrowLeft className="w-3 h-3 text-blue-600" />
-                </Button>
-              )}
+              {/* Always show promote button, even for L0 */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-6 h-6 p-0 hover:bg-blue-100"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handlePromote()
+                }}
+                title="階層を上げる"
+              >
+                <ArrowLeft className="w-3 h-3 text-blue-600" />
+              </Button>
               {canDemote && (
                 <Button
                   variant="ghost"
@@ -223,12 +222,10 @@ function SortableTreeItem({
             同階層にノードを追加 (Enter)
           </ContextMenuItem>
           <ContextMenuSeparator />
-          {canPromote && (
-            <ContextMenuItem onClick={handlePromote}>
-              <ArrowLeft className="w-4 h-4 mr-2 text-blue-600" />
-              階層を上げる
-            </ContextMenuItem>
-          )}
+          <ContextMenuItem onClick={handlePromote}>
+            <ArrowLeft className="w-4 h-4 mr-2 text-blue-600" />
+            階層を上げる
+          </ContextMenuItem>
           {canDemote && (
             <ContextMenuItem onClick={handleDemote}>
               <ArrowRight className="w-4 h-4 mr-2 text-orange-600" />
@@ -263,7 +260,7 @@ function SortableTreeItem({
                 onNodeCopy={onNodeCopy}
                 onNodeChangeLevel={onNodeChangeLevel}
                 allNodes={allNodes}
-                canPromote={level > 0} // Can promote if not at root level
+                canPromote={true} // Always allow promote
                 canDemote={true} // Can always demote (will find appropriate parent)
               />
             ))}
@@ -369,7 +366,7 @@ export function TreeView({
                 onNodeCopy={onNodeCopy}
                 onNodeChangeLevel={onNodeChangeLevel}
                 allNodes={nodes}
-                canPromote={false} // Root nodes cannot be promoted
+                canPromote={true} // Always allow promote, even for root nodes
                 canDemote={true}
               />
             ))}

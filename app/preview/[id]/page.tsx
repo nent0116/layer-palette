@@ -1,11 +1,12 @@
 import { Preview } from "@/components/preview"
 
 interface PreviewPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
-export default function PreviewPage({ params }: PreviewPageProps) {
-  return <Preview mapId={params.id} />
+export default async function PreviewPage({ params }: PreviewPageProps) {
+  const { id } = await params
+  return <Preview mapId={id} />
 }

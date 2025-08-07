@@ -62,47 +62,55 @@ export function CreateMapDialog({ open, onOpenChange, onCreateMap }: CreateMapDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] bg-white">
         <DialogHeader>
-          <DialogTitle>新しいマップを作成</DialogTitle>
-          <DialogDescription>マップの名前とテンプレートを選択してください</DialogDescription>
+          <DialogTitle className="text-gray-900">新しいマップを作成</DialogTitle>
+          <DialogDescription className="text-gray-600">
+            マップの名前とテンプレートを選択してください
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="map-name">マップ名</Label>
+            <Label htmlFor="map-name" className="text-gray-700">マップ名</Label>
             <Input
               id="map-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="例: 会社サイトマップ"
-              className="rounded-lg"
+              className="bg-white border-gray-300"
             />
           </div>
 
           <div className="space-y-3">
-            <Label>テンプレート</Label>
+            <Label className="text-gray-700">テンプレート</Label>
             <div className="grid grid-cols-2 gap-3">
               {templates.map((template) => (
                 <Card
                   key={template.id}
-                  className={`cursor-pointer transition-all ${
+                  className={`cursor-pointer transition-all bg-white border ${
                     selectedTemplate === template.id
-                      ? "ring-2 ring-[rgb(var(--color-primary))] bg-[rgb(var(--color-primary))]/5"
-                      : "hover:shadow-md"
+                      ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200"
+                      : "hover:shadow-md border-gray-200 hover:border-gray-300"
                   }`}
                   onClick={() => setSelectedTemplate(template.id)}
                 >
                   <CardHeader className="p-4">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm">{template.name}</CardTitle>
+                      <CardTitle className="text-sm text-gray-900">{template.name}</CardTitle>
                       <div className="flex gap-1">
                         {template.colors.map((color, index) => (
-                          <div key={index} className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                          <div 
+                            key={index} 
+                            className="w-3 h-3 rounded-full border border-gray-200" 
+                            style={{ backgroundColor: color }} 
+                          />
                         ))}
                       </div>
                     </div>
-                    <CardDescription className="text-xs">{template.description}</CardDescription>
+                    <CardDescription className="text-xs text-gray-600">
+                      {template.description}
+                    </CardDescription>
                   </CardHeader>
                 </Card>
               ))}
@@ -111,13 +119,13 @@ export function CreateMapDialog({ open, onOpenChange, onCreateMap }: CreateMapDi
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="bg-white">
             キャンセル
           </Button>
           <Button
             onClick={handleCreate}
             disabled={!name.trim()}
-            className="bg-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent))]/90"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             作成
           </Button>

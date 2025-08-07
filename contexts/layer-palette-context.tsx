@@ -133,6 +133,15 @@ function updateNodeLevels(nodes: LayerNode[], level = 0): LayerNode[] {
   }))
 }
 
+// Function to update node colors based on their levels and template
+function updateNodeColors(nodes: LayerNode[], template: LayerMap["template"]): LayerNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    backgroundColor: getColorForLevel(template, node.level || 0),
+    children: updateNodeColors(node.children, template),
+  }))
+}
+
 function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteAction): LayerPaletteState {
   switch (action.type) {
     case "CREATE_MAP": {
@@ -157,10 +166,14 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
       const map = state.maps.find((m) => m.id === action.payload)
       if (!map) return state
 
-      // Update levels when loading a map
-      const updatedMap = {
+      // Update levels and colors when loading a map
+      let updatedMap = {
         ...map,
         rootNodes: updateNodeLevels(map.rootNodes),
+      }
+      updatedMap = {
+        ...updatedMap,
+        rootNodes: updateNodeColors(updatedMap.rootNodes, updatedMap.template),
       }
 
       return {
@@ -211,8 +224,7 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
       const newNode: LayerNode = {
         id: generateId(),
         ...action.payload.node,
-        backgroundColor:
-          action.payload.node.backgroundColor || getColorForLevel(state.currentMap.template, newNodeLevel),
+        backgroundColor: getColorForLevel(state.currentMap.template, newNodeLevel),
         order: 0,
         children: [],
         level: newNodeLevel,
@@ -222,7 +234,7 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
         if (!parentId) {
           // Add to root level
           const newOrder = nodes.length
-          return [...nodes, { ...newNode, order: newOrder, level: 0 }]
+          return [...nodes, { ...newNode, order: newOrder, level: 0, backgroundColor: getColorForLevel(state.currentMap!.template, 0) }]
         }
 
         return nodes.map((node) => {
@@ -238,7 +250,7 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
                   parentId,
                   order: newOrder,
                   level: childLevel,
-                  backgroundColor: newNode.backgroundColor || getColorForLevel(state.currentMap!.template, childLevel),
+                  backgroundColor: getColorForLevel(state.currentMap!.template, childLevel),
                 },
               ],
             }
@@ -250,10 +262,13 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
         })
       }
 
-      const updatedRootNodes = addNodeToTree(state.currentMap.rootNodes, action.payload.parentId)
+      let updatedRootNodes = addNodeToTree(state.currentMap.rootNodes, action.payload.parentId)
+      updatedRootNodes = updateNodeLevels(updatedRootNodes)
+      updatedRootNodes = updateNodeColors(updatedRootNodes, state.currentMap.template)
+      
       const updatedMap = {
         ...state.currentMap,
-        rootNodes: updateNodeLevels(updatedRootNodes),
+        rootNodes: updatedRootNodes,
         updatedAt: new Date(),
       }
 
@@ -272,7 +287,13 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
       const updateNodeInTree = (nodes: LayerNode[]): LayerNode[] => {
         return nodes.map((node) => {
           if (node.id === action.payload.nodeId) {
-            return { ...node, ...action.payload.updates }
+            // If backgroundColor is being updated manually, preserve it
+            // Otherwise, use the template color for the level
+            const updates = { ...action.payload.updates }
+            if (!updates.backgroundColor && node.level !== undefined) {
+              updates.backgroundColor = getColorForLevel(state.currentMap!.template, node.level)
+            }
+            return { ...node, ...updates }
           }
           return {
             ...node,
@@ -308,10 +329,13 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
           }))
       }
 
-      const updatedRootNodes = deleteNodeFromTree(state.currentMap.rootNodes)
+      let updatedRootNodes = deleteNodeFromTree(state.currentMap.rootNodes)
+      updatedRootNodes = updateNodeLevels(updatedRootNodes)
+      updatedRootNodes = updateNodeColors(updatedRootNodes, state.currentMap.template)
+      
       const updatedMap = {
         ...state.currentMap,
-        rootNodes: updateNodeLevels(updatedRootNodes),
+        rootNodes: updatedRootNodes,
         updatedAt: new Date(),
       }
 
@@ -382,10 +406,12 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
 
       let rootNodes = removeNodeFromTree(state.currentMap.rootNodes)
       rootNodes = addNodeToTree(rootNodes, action.payload.newParentId, action.payload.newOrder)
+      rootNodes = updateNodeLevels(rootNodes)
+      rootNodes = updateNodeColors(rootNodes, state.currentMap.template)
 
       const updatedMap = {
         ...state.currentMap,
-        rootNodes: updateNodeLevels(rootNodes),
+        rootNodes: rootNodes,
         updatedAt: new Date(),
       }
 
@@ -425,9 +451,13 @@ function layerPaletteReducer(state: LayerPaletteState, action: LayerPaletteActio
     }
 
     case "IMPORT_MAP": {
-      const updatedMap = {
+      let updatedMap = {
         ...action.payload,
         rootNodes: updateNodeLevels(action.payload.rootNodes),
+      }
+      updatedMap = {
+        ...updatedMap,
+        rootNodes: updateNodeColors(updatedMap.rootNodes, updatedMap.template),
       }
       return {
         ...state,
