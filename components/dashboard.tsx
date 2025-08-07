@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Edit, Share, Trash2, FileSpreadsheet } from 'lucide-react'
+import { Plus, Edit, Trash2, FileSpreadsheet } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -107,18 +107,6 @@ export function Dashboard() {
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="sm" onClick={() => handleEditMap(map.id)}>
                             <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              toast({
-                                title: "共有機能",
-                                description: "共有機能は開発中です",
-                              })
-                            }}
-                          >
-                            <Share className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"

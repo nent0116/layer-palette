@@ -105,8 +105,22 @@ function flattenNodes(nodes: any[], level = 0, startIndex = 0): any[] {
 
 // VBAマクロのロジックを実装（ライブプレビューと同じロジック）
 function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
-  // Remove header row and row number column
-  const cleanedGridData = gridData.slice(1).map(row => row.slice(1))
+  // WBSテンプレートかどうかを判定（1行目に日本語ヘッダーがあるかどうかで判定）
+  const isWBSTemplate = gridData.length > 0 && gridData[0].length > 1 && 
+    typeof gridData[0][1] === 'string' && gridData[0][1] === '親タスク'
+  
+  let cleanedGridData: any[][]
+  let startRowIndex = 0
+  
+  if (isWBSTemplate) {
+    // WBSテンプレートの場合：1行目（日本語ヘッダー）を保持し、行番号列のみ削除
+    cleanedGridData = gridData.map(row => row.slice(1))
+    startRowIndex = 1 // 2行目からスタイル計算を開始
+  } else {
+    // 通常のテンプレートの場合：1行目と行番号列を削除
+    cleanedGridData = gridData.slice(1).map(row => row.slice(1))
+    startRowIndex = 0
+  }
   
   // Colmax配列: 各行で最初に値が入っている列番号
   const colmax: { [row: number]: number } = {}
@@ -128,10 +142,29 @@ function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
   // セルスタイル情報を格納
   const cellStyles: { [key: string]: { backgroundColor?: string; borders?: any } } = {}
 
+  // WBSテンプレートの場合、1行目の日本語ヘッダー（A1～H1）に薄いグレーの背景色と罫線を適用
+  if (isWBSTemplate) {
+    for (let col = 0; col < 8; col++) {
+      const cellKey = `0-${col}`
+      cellStyles[cellKey] = {
+        backgroundColor: "#f3f4f6", // 薄いグレー
+        borders: { 
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } }
+        }
+      }
+    }
+  }
+
+  // WBSテンプレートの場合、2行目からスタイル計算を開始
+  const styleStartRow = isWBSTemplate ? 1 : 0
+
   // 列ごとに背景色を適用（ライブプレビューと同じロジック）
   for (let col = 0; col <= maxCol; col++) {
     const headerColor = getHeaderColor(col) // ライブプレビューと同じヘッダー色
-    for (let row = 0; row <= maxRow; row++) {
+    for (let row = styleStartRow; row <= maxRow; row++) {
       const cellKey = `${row}-${col}`
       if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
       cellStyles[cellKey].backgroundColor = headerColor
@@ -139,7 +172,7 @@ function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
   }
 
   // 各行の処理（ライブプレビューと同じロジック）
-  for (let row = 0; row <= maxRow; row++) {
+  for (let row = styleStartRow; row <= maxRow; row++) {
     const firstValueCol = colmax[row]
     if (firstValueCol !== undefined) {
       // テキストがあるセルとその右側のセルには、ヘッダー色と同じ薄い色を使用
@@ -181,14 +214,29 @@ function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
     }
   }
 
-  // 全体の外枠線
-  for (let row = 0; row <= maxRow; row++) {
+  // WBSテンプレートの場合、データ行の空白セル（D2からH列まで）に罫線を適用
+  if (isWBSTemplate) {
+    for (let row = 1; row <= maxRow; row++) {
+      for (let col = 3; col < 8; col++) {
+        const cellKey = `${row}-${col}`
+        if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
+        if (!cellStyles[cellKey].borders) cellStyles[cellKey].borders = {}
+        cellStyles[cellKey].borders.top = { style: 'thin', color: { argb: 'FF000000' } }
+        cellStyles[cellKey].borders.bottom = { style: 'thin', color: { argb: 'FF000000' } }
+        cellStyles[cellKey].borders.left = { style: 'thin', color: { argb: 'FF000000' } }
+        cellStyles[cellKey].borders.right = { style: 'thin', color: { argb: 'FF000000' } }
+      }
+    }
+  }
+
+  // 全体の外枠線（WBSテンプレートの場合は2行目から）
+  for (let row = styleStartRow; row <= maxRow; row++) {
     for (let col = 0; col <= maxCol; col++) {
       const cellKey = `${row}-${col}`
       if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
       if (!cellStyles[cellKey].borders) cellStyles[cellKey].borders = {}
       
-      if (row === 0) cellStyles[cellKey].borders.top = { style: 'medium', color: { argb: 'FF000000' } }
+      if (row === styleStartRow) cellStyles[cellKey].borders.top = { style: 'medium', color: { argb: 'FF000000' } }
       if (row === maxRow) cellStyles[cellKey].borders.bottom = { style: 'medium', color: { argb: 'FF000000' } }
       if (col === 0) cellStyles[cellKey].borders.left = { style: 'medium', color: { argb: 'FF000000' } }
       if (col === maxCol) cellStyles[cellKey].borders.right = { style: 'medium', color: { argb: 'FF000000' } }
@@ -235,7 +283,15 @@ export async function exportToExcel(data: ExportData) {
     worksheet.properties.defaultColWidth = 18
     
     // Remove header row and row number column from grid data
-    const cleanedGridData = gridData.slice(1).map(row => row.slice(1))
+    // WBSテンプレートの場合は1行目（日本語ヘッダー）から開始
+    let cleanedGridData: any[][]
+    if (template === "wbs") {
+      // WBSテンプレートの場合：1行目（日本語ヘッダー）から開始し、行番号列のみ削除
+      cleanedGridData = gridData.map(row => row.slice(1))
+    } else {
+      // 通常のテンプレートの場合：1行目と行番号列を削除
+      cleanedGridData = gridData.slice(1).map(row => row.slice(1))
+    }
     
     // Add data to worksheet
     cleanedGridData.forEach((row, rowIndex) => {
@@ -385,7 +441,15 @@ export function exportToCSV(data: ExportData) {
     csvContent += `\n`
     
     // Remove header row and row number column from CSV data too
-    const cleanedGridData = gridData.slice(1).map(row => row.slice(1))
+    // WBSテンプレートの場合は1行目（日本語ヘッダー）から開始
+    let cleanedGridData: any[][]
+    if (template === "wbs") {
+      // WBSテンプレートの場合：1行目（日本語ヘッダー）から開始し、行番号列のみ削除
+      cleanedGridData = gridData.map(row => row.slice(1))
+    } else {
+      // 通常のテンプレートの場合：1行目と行番号列を削除
+      cleanedGridData = gridData.slice(1).map(row => row.slice(1))
+    }
     
     // Add grid data
     cleanedGridData.forEach(row => {
