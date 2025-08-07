@@ -346,8 +346,8 @@ function getNodeColor(flatNodes: FlatNode[], row: number, col: number): string {
 }
 
 export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "custom", onExportDataReady }: LivePreviewProps) {
-  // WBSテンプレート用の情報抽出関数
-  const extractWBSInfo = useCallback((notes: string) => {
+  // WBSテンプレートとコンテンツカレンダーテンプレート用の情報抽出関数
+  const extractHierarchicalInfo = useCallback((notes: string) => {
     const info: { [key: string]: string } = {}
     const lines = notes.split('\n')
     lines.forEach(line => {
@@ -366,17 +366,17 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
     return info
   }, [])
 
-  // WBSテンプレート用の専用ロジック
+  // WBSテンプレートとコンテンツカレンダーテンプレート用の専用ロジック
   const flatNodes = useMemo(() => 
-    template === "wbs" ? flattenWBSNodes(nodes) : flattenNodes(nodes), 
+    (template === "wbs" || template === "content-calendar") ? flattenWBSNodes(nodes) : flattenNodes(nodes), 
     [nodes, template]
   )
   const totalRows = flatNodes.length
   const totalCols = 15
 
-  // WBSテンプレート用のセルスタイル計算
+  // WBSテンプレートとコンテンツカレンダーテンプレート用のセルスタイル計算
   const cellStyles = useMemo(() => 
-    template === "wbs" ? calculateWBSCellStyles(flatNodes, totalRows, totalCols) : calculateCellStyles(flatNodes, totalRows, totalCols),
+    (template === "wbs" || template === "content-calendar") ? calculateWBSCellStyles(flatNodes, totalRows, totalCols) : calculateCellStyles(flatNodes, totalRows, totalCols),
     [flatNodes, totalRows, totalCols, template]
   )
 
@@ -387,8 +387,8 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
     flatNodes.forEach((flatNode) => {
       const { rowIndex, level } = flatNode
       
-      // WBSテンプレートの場合、レベルに応じて適切な列に配置
-      if (template === "wbs") {
+      // WBSテンプレートとコンテンツカレンダーテンプレートの場合、レベルに応じて適切な列に配置
+      if (template === "wbs" || template === "content-calendar") {
         if (level === 0) {
           // 親タスクは列A（インデックス0）に配置
           gridData[rowIndex][0] = flatNode
@@ -414,8 +414,8 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
   const getCellStyle = (cell: FlatNode | null, rowIndex: number, colIndex: number) => {
     let cellKey: string
     
-    if (template === "wbs") {
-      // WBSテンプレートの場合、データ行は2行目から開始（rowIndex + 1）
+    if (template === "wbs" || template === "content-calendar") {
+      // WBSテンプレートとコンテンツカレンダーテンプレートの場合、データ行は2行目から開始（rowIndex + 1）
       const actualRowIndex = rowIndex + 1
       cellKey = `${actualRowIndex}-${colIndex}`
     } else {
@@ -437,15 +437,15 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
   const getGridData = useCallback(() => {
     const data: (string | number)[][] = []
     
-    if (template === "wbs") {
-      // 1行目：WBSテンプレート用の日本語ヘッダー
-      const wbsHeaderRow: (string | number)[] = [1] // 行番号1
-      wbsHeaderRow.push('親タスク', '子タスク', '孫タスク', '担当者名', '開始日', '終了日', 'ステータス', '進捗率')
+    if (template === "wbs" || template === "content-calendar") {
+      // 1行目：WBSテンプレートとコンテンツカレンダーテンプレート用の日本語ヘッダー
+      const headerRow: (string | number)[] = [1] // 行番号1
+      headerRow.push('親タスク', '子タスク', '孫タスク', '担当者名', '開始日', '終了日', 'ステータス', '進捗率')
       // 残りの列は空文字
       for (let i = 8; i < 15; i++) {
-        wbsHeaderRow.push('')
+        headerRow.push('')
       }
-      data.push(wbsHeaderRow)
+      data.push(headerRow)
       
       // データ行（2行目から）
       for (let row = 0; row < totalRows; row++) {

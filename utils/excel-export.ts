@@ -105,15 +105,15 @@ function flattenNodes(nodes: any[], level = 0, startIndex = 0): any[] {
 
 // VBAマクロのロジックを実装（ライブプレビューと同じロジック）
 function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
-  // WBSテンプレートかどうかを判定（1行目に日本語ヘッダーがあるかどうかで判定）
-  const isWBSTemplate = gridData.length > 0 && gridData[0].length > 1 && 
+  // WBSテンプレートとコンテンツカレンダーテンプレートかどうかを判定（1行目に日本語ヘッダーがあるかどうかで判定）
+  const isHierarchicalTemplate = gridData.length > 0 && gridData[0].length > 1 && 
     typeof gridData[0][1] === 'string' && gridData[0][1] === '親タスク'
   
   let cleanedGridData: any[][]
   let startRowIndex = 0
   
-  if (isWBSTemplate) {
-    // WBSテンプレートの場合：1行目（日本語ヘッダー）を保持し、行番号列のみ削除
+  if (isHierarchicalTemplate) {
+    // WBSテンプレートとコンテンツカレンダーテンプレートの場合：1行目（日本語ヘッダー）を保持し、行番号列のみ削除
     cleanedGridData = gridData.map(row => row.slice(1))
     startRowIndex = 1 // 2行目からスタイル計算を開始
   } else {
@@ -143,7 +143,7 @@ function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
   const cellStyles: { [key: string]: { backgroundColor?: string; borders?: any } } = {}
 
   // WBSテンプレートの場合、1行目の日本語ヘッダー（A1～H1）に薄いグレーの背景色と罫線を適用
-  if (isWBSTemplate) {
+  if (isHierarchicalTemplate) {
     for (let col = 0; col < 8; col++) {
       const cellKey = `0-${col}`
       cellStyles[cellKey] = {
@@ -159,7 +159,7 @@ function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
   }
 
   // WBSテンプレートの場合、2行目からスタイル計算を開始
-  const styleStartRow = isWBSTemplate ? 1 : 0
+  const styleStartRow = isHierarchicalTemplate ? 1 : 0
 
   // 列ごとに背景色を適用（ライブプレビューと同じロジック）
   for (let col = 0; col <= maxCol; col++) {
@@ -215,7 +215,7 @@ function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
   }
 
   // WBSテンプレートの場合、データ行の空白セル（D2からH列まで）に罫線を適用
-  if (isWBSTemplate) {
+  if (isHierarchicalTemplate) {
     for (let row = 1; row <= maxRow; row++) {
       for (let col = 3; col < 8; col++) {
         const cellKey = `${row}-${col}`
