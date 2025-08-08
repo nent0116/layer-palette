@@ -374,17 +374,17 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
     return info
   }, [])
 
-  // WBSテンプレートとコンテンツカレンダーテンプレート用の専用ロジック
+  // WBSテンプレート用の専用ロジック（コンテンツカレンダーは通常ロジックに合わせる）
   const flatNodes = useMemo(() => 
-    (template === "wbs" || template === "content-calendar") ? flattenWBSNodes(nodes) : flattenNodes(nodes), 
+    (template === "wbs") ? flattenWBSNodes(nodes) : flattenNodes(nodes), 
     [nodes, template]
   )
   const totalRows = flatNodes.length
   const totalCols = 15
 
-  // WBSテンプレートとコンテンツカレンダーテンプレート用のセルスタイル計算
+  // セルスタイル計算（コンテンツカレンダーはSitemapと同様の通常ロジック）
   const cellStyles = useMemo(() => 
-    (template === "wbs" || template === "content-calendar") ? calculateWBSCellStyles(flatNodes, totalRows, totalCols) : calculateCellStyles(flatNodes, totalRows, totalCols),
+    (template === "wbs") ? calculateWBSCellStyles(flatNodes, totalRows, totalCols) : calculateCellStyles(flatNodes, totalRows, totalCols),
     [flatNodes, totalRows, totalCols, template]
   )
 
@@ -422,12 +422,12 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
   const getCellStyle = (cell: FlatNode | null, rowIndex: number, colIndex: number) => {
     let cellKey: string
     
-    if (template === "wbs" || template === "content-calendar") {
-      // WBSテンプレートとコンテンツカレンダーテンプレートの場合、データ行は2行目から開始（rowIndex + 1）
+    if (template === "wbs") {
+      // WBSテンプレートの場合、データ行は2行目から開始（rowIndex + 1）
       const actualRowIndex = rowIndex + 1
       cellKey = `${actualRowIndex}-${colIndex}`
     } else {
-      // 通常のテンプレートの場合
+      // 通常のテンプレートおよびコンテンツカレンダーの場合
       cellKey = `${rowIndex}-${colIndex}`
     }
     
@@ -445,8 +445,8 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
   const getGridData = useCallback(() => {
     const data: (string | number)[][] = []
     
-    if (template === "wbs" || template === "content-calendar") {
-      // 1行目：WBSテンプレートとコンテンツカレンダーテンプレート用の日本語ヘッダー
+    if (template === "wbs") {
+      // 1行目：WBSテンプレート用の日本語ヘッダー
       const headerRow: (string | number)[] = [1] // 行番号1
       headerRow.push('親タスク', '子タスク', '孫タスク', '担当者名', '開始日', '終了日', 'ステータス', '進捗率')
       // 残りの列は空文字
