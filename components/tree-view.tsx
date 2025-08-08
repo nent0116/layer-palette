@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useCallback } from "react"
 import {
   DndContext,
-  closestCenter,
+  pointerWithin,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -305,7 +305,7 @@ function ChildDropTarget({ id }: { id: string }) {
   return (
     <div
       ref={setNodeRef}
-      className={`absolute left-0 top-0 h-full w-10 rounded-l-xl transition-colors ${
+      className={`absolute -left-3 top-0 h-full w-14 rounded-l-xl transition-colors z-40 pointer-events-auto ${
         isOver ? 'bg-purple-200/60 ring-2 ring-purple-400/60' : 'bg-transparent'
       }`}
       aria-hidden
@@ -387,6 +387,7 @@ export function TreeView({
 
       const activeResult = findNodeAndParent(nodes, active.id as string)
       const overResult = findNodeAndParent(nodes, over.id as string)
+
       // 子化ドロップゾーンへドロップ
       if (typeof over.id === 'string' && (over.id as string).startsWith('child:')) {
         const parentId = (over.id as string).slice('child:'.length)
@@ -400,16 +401,16 @@ export function TreeView({
 
       if (!activeResult || !overResult) return
 
-      // 同一親内のみ並べ替え許可
-      if (activeResult.parentId !== overResult.parentId) return
-
-      // インデックス補正: remove→insert の実装なので、前から後ろへ移動のときは1つ詰まる
+      // overノードの親に移動（異なる親も許可）
       let targetIndex = overResult.index
-      if (activeResult.index < overResult.index) {
+      let targetParentId = overResult.parentId
+
+      // 同一親内のみ、remove→insertの詰まり分を補正
+      if (activeResult.parentId === overResult.parentId && activeResult.index < overResult.index) {
         targetIndex = Math.max(0, targetIndex - 1)
       }
 
-      onNodeMove(active.id as string, targetIndex, overResult.parentId)
+      onNodeMove(active.id as string, targetIndex, targetParentId)
     },
     [nodes, onNodeMove],
   )
@@ -430,7 +431,7 @@ export function TreeView({
         </Button>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
         {/* ルート階層のみを並べ替え対象にする */}
         <SortableContext items={nodes.map(n => n.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-3" role="tree" aria-label="階層構造ツリー">
