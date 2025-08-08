@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Plus, Edit, Trash2, FileSpreadsheet } from 'lucide-react'
+import { Plus, Edit, Trash2, FileSpreadsheet, Keyboard, BookOpen, CheckCircle2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLayerPalette } from "@/contexts/layer-palette-context"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { DropZone } from "@/components/drop-zone"
 import { CreateMapDialog } from "@/components/create-map-dialog"
 
 export function Dashboard() {
@@ -41,13 +40,7 @@ export function Dashboard() {
     })
   }
 
-  const handleFileImport = (file: File) => {
-    // TODO: Implement Excel file import
-    toast({
-      title: "インポート機能",
-      description: "Excel インポート機能は開発中です",
-    })
-  }
+  // インポート機能はトップでは提供しないため、関連処理は削除
 
   // 新しいマップが作成されたらナビゲーションする
   useEffect(() => {
@@ -65,7 +58,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-10">
         {/* Header */}
         <header className="flex items-center justify-between">
           <div>
@@ -141,16 +134,51 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Import Section */}
-        <Card className="shadow-2xl rounded-3xl bg-white/80 backdrop-blur-sm border-2 border-emerald-100 animate-fade-in">
-          <CardHeader className="p-8 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-3xl">
-            <CardTitle className="text-2xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              インポート
+        {/* Guide Section */}
+        <Card className="my-10 shadow-2xl rounded-3xl bg-white/90 backdrop-blur border-2 border-indigo-100 animate-fade-in">
+          <CardHeader className="p-8 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-t-3xl">
+            <CardTitle className="text-2xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              操作説明
             </CardTitle>
-            <CardDescription className="text-slate-600 text-lg">既存のExcelファイルからマップを作成</CardDescription>
+            <CardDescription className="text-slate-600 text-lg">基本的な使い方とキーボードショートカット</CardDescription>
           </CardHeader>
-          <CardContent className="p-6 pt-0">
-            <DropZone onFileSelect={handleFileImport} />
+          <CardContent className="p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-800 mb-4">
+                  <BookOpen className="w-5 h-5 text-indigo-600" />
+                  基本操作
+                </h3>
+                <ul className="list-none text-slate-700 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-indigo-500 mt-0.5" />
+                    <span>「新規マップ」ボタンからマップを作成</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-indigo-500 mt-0.5" />
+                    <span>一覧の編集アイコンから編集画面へ移動</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-indigo-500 mt-0.5" />
+                    <span>ごみ箱アイコンでマップを削除</span>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-800 mb-4">
+                  <Keyboard className="w-5 h-5 text-indigo-600" />
+                  ショートカット（編集画面）
+                </h3>
+                <ul className="list-none text-slate-700 space-y-2">
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5" /><span>Ctrl + Z: 元に戻す</span></li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5" /><span>Ctrl + Shift + Z または Ctrl + Y: やり直し</span></li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5" /><span>Enter: 同じ階層にノード追加</span></li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5" /><span>Shift + Enter: 子ノードを追加</span></li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5" /><span>Delete: ノード削除</span></li>
+                  <li className="flex items-start gap-2"><CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5" /><span>Ctrl + S: 保存</span></li>
+                </ul>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
