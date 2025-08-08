@@ -243,7 +243,7 @@ function flattenNodes(nodes: LayerNode[], level = 0, startIndex = 0): FlatNode[]
   return result
 }
 
-// VBAマクロのロジックを実装
+// マクロのロジックを実装
 function calculateCellStyles(flatNodes: FlatNode[], totalRows: number, totalCols: number) {
   // Colmax配列: 各行で最初に値が入っている列番号
   const colmax: { [row: number]: number } = {}
@@ -263,13 +263,21 @@ function calculateCellStyles(flatNodes: FlatNode[], totalRows: number, totalCols
   // セルスタイル情報を格納
   const cellStyles: { [key: string]: { backgroundColor?: string; borders?: any } } = {}
 
-  // 列ごとに背景色を適用（VBAの列ごとに染める部分）
+  // 列ごとに背景色を適用（列で最初に現れるノードの色を横方向と同じ濃さで使用）
+  const getColumnBaseColor = (col: number): string => {
+    const found = flatNodes.find(fn => fn.level === col)
+    if (found) {
+      // 横方向と同じ getNodeColor を利用（50%相当）
+      return getNodeColor(flatNodes, found.rowIndex, col)
+    }
+    return '#f8fafc'
+  }
   for (let col = 0; col <= maxCol; col++) {
-    const headerColor = getHeaderColor(col) // 3行目相当の色
+    const baseColor = getColumnBaseColor(col)
     for (let row = 0; row <= maxRow; row++) {
       const cellKey = `${row}-${col}`
       if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
-      cellStyles[cellKey].backgroundColor = headerColor
+      cellStyles[cellKey].backgroundColor = baseColor
     }
   }
 
@@ -277,8 +285,8 @@ function calculateCellStyles(flatNodes: FlatNode[], totalRows: number, totalCols
   for (let row = 0; row <= maxRow; row++) {
     const firstValueCol = colmax[row]
     if (firstValueCol !== undefined) {
-      // テキストがあるセルとその右側のセルには、ヘッダー色と同じ薄い色を使用
-      const headerColor = getHeaderColor(firstValueCol)
+      // テキストがあるセルとその右側のセルには、ノード色由来の薄い色を使用
+      const headerColor = getNodeColor(flatNodes, row, firstValueCol)
       
       // テキストがあるセルに背景色を適用（ヘッダー色と同じ薄い色）
       const textCellKey = `${row}-${firstValueCol}`
@@ -527,15 +535,14 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
         </h3>
         <div className="flex items-center gap-2">
           <div className="text-sm text-slate-500 bg-white/70 px-3 py-1 rounded-full">Excel風表示</div>
-          <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">VBAロジック適用</div>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl border-2 border-blue-100 shadow-xl overflow-hidden animate-fade-in">
         <div className="overflow-auto max-h-[calc(100vh-200px)]">
-          <div className="min-w-[1200px]">
+          <div className="min-w-[1800px]">
             {/* Header row - Fixed layout (アルファベット) - 0行目 */}
-            <div className="grid grid-cols-[48px_repeat(15,80px)] bg-gradient-to-r from-slate-100 to-blue-100 border-b-2 border-blue-200">
+            <div className="grid grid-cols-[48px_repeat(15,120px)] bg-gradient-to-r from-slate-100 to-blue-100 border-b-2 border-blue-200">
               {/* Empty cell for row numbers column */}
               <div className="p-3 text-xs font-bold text-center border-r border-blue-200 bg-gradient-to-b from-slate-50 to-slate-100"></div>
               {/* Column headers */}
@@ -551,7 +558,7 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
 
             {/* WBSテンプレート用の1行目ヘッダー */}
             {template === "wbs" && (
-              <div className="grid grid-cols-[48px_repeat(15,80px)] bg-gradient-to-r from-gray-100 to-gray-200 border-b-2 border-blue-200">
+              <div className="grid grid-cols-[48px_repeat(15,120px)] bg-gradient-to-r from-gray-100 to-gray-200 border-b-2 border-blue-200">
                 {/* Row number */}
                 <div className="p-3 text-xs font-bold text-center border-r border-blue-200 bg-gray-100">
                   1
@@ -595,7 +602,7 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
 
             {/* Data rows - Fixed layout */}
             {Array.from({ length: totalRows }, (_, rowIndex) => (
-              <div key={rowIndex} className="grid grid-cols-[48px_repeat(15,80px)] border-b border-slate-200">
+              <div key={rowIndex} className="grid grid-cols-[48px_repeat(15,120px)] border-b border-slate-200">
                 {/* Row number */}
                 <div className="p-3 text-xs font-bold text-center border-r border-blue-200 min-h-[48px] flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100">
                   {template === "wbs" ? rowIndex + 2 : rowIndex + 1}
@@ -613,7 +620,7 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
                     // WBSテンプレート用の列表示
                     if (template === "wbs" && colIndex < 8) {
                       let displayContent = ""
-                      let displayClass = "text-sm font-medium text-slate-700 truncate"
+                      let displayClass = "text-sm font-medium text-slate-700"
                       let showDot = false
                       
                       switch (colIndex) {
@@ -637,23 +644,23 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
                           break
                         case 3: // 担当者名
                           displayContent = ""
-                          displayClass = "text-xs text-slate-600 truncate"
+                          displayClass = "text-xs text-slate-600"
                           break
                         case 4: // 開始日
                           displayContent = ""
-                          displayClass = "text-xs text-slate-600 truncate"
+                          displayClass = "text-xs text-slate-600"
                           break
                         case 5: // 終了日
                           displayContent = ""
-                          displayClass = "text-xs text-slate-600 truncate"
+                          displayClass = "text-xs text-slate-600"
                           break
                         case 6: // ステータス
                           displayContent = ""
-                          displayClass = "text-xs font-medium truncate text-slate-600"
+                          displayClass = "text-xs font-medium text-slate-600"
                           break
                         case 7: // 進捗率
                           displayContent = ""
-                          displayClass = "text-xs font-bold text-slate-700 truncate"
+                          displayClass = "text-xs font-bold text-slate-700"
                           break
                       }
 
@@ -694,7 +701,7 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
                             className="w-3 h-3 rounded-full border border-white shadow-sm flex-shrink-0"
                             style={{ backgroundColor: node.backgroundColor }}
                           />
-                          <span className="text-sm font-medium text-slate-700 truncate">{node.title}</span>
+                          <span className="text-sm font-medium text-slate-700">{node.title}</span>
                         </div>
                       </div>
                     )
@@ -721,27 +728,6 @@ export function LivePreview({ nodes, selectedNodeId, onNodeSelect, template = "c
               <ChevronRight className="w-8 h-8 text-blue-500" />
             </div>
             <p className="text-slate-500">ノードを追加するとプレビューが表示されます</p>
-          </div>
-        </div>
-      )}
-
-      {/* Legend */}
-      {nodes.length > 0 && (
-        <div className="mt-4 p-4 bg-white/70 backdrop-blur-sm rounded-xl border border-blue-200">
-          <h4 className="text-sm font-semibold text-slate-700 mb-2">VBAロジック適用済み</h4>
-          <div className="flex flex-wrap gap-4 text-xs text-slate-600">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span>列全体: ヘッダー色適用</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span>右側拡張: テキストセル色適用</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-slate-400 border border-slate-600 rounded"></div>
-              <span>罫線: VBAマクロ準拠</span>
-            </div>
           </div>
         </div>
       )}

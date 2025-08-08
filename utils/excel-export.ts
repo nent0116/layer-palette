@@ -103,7 +103,7 @@ function flattenNodes(nodes: any[], level = 0, startIndex = 0): any[] {
   return flatNodes
 }
 
-// VBAマクロのロジックを実装（ライブプレビューと同じロジック）
+// マクロのロジックを実装（ライブプレビューと同じロジック）
 function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
   // WBSテンプレートとコンテンツカレンダーテンプレートかどうかを判定（1行目に日本語ヘッダーがあるかどうかで判定）
   const isHierarchicalTemplate = gridData.length > 0 && gridData[0].length > 1 && 
@@ -161,13 +161,22 @@ function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
   // WBSテンプレートの場合、2行目からスタイル計算を開始
   const styleStartRow = isHierarchicalTemplate ? 1 : 0
 
-  // 列ごとに背景色を適用（ライブプレビューと同じロジック）
+  // 列ごとに背景色を適用（列で最初に現れるノードの色を横方向と同じ濃さで使用）
+  const getColumnBaseColor = (col: number): string => {
+    const flat = flattenNodes(nodes || [])
+    const found = flat.find(fn => fn.level === col)
+    if (found && found.node.backgroundColor) {
+      // 横方向と同じ getNodeColor を利用（戻り値はHEX6桁）
+      return `#${getNodeColor(nodes || [], found.rowIndex, col)}`
+    }
+    return '#f8fafc'
+  }
   for (let col = 0; col <= maxCol; col++) {
-    const headerColor = getHeaderColor(col) // ライブプレビューと同じヘッダー色
+    const baseColor = getColumnBaseColor(col)
     for (let row = styleStartRow; row <= maxRow; row++) {
       const cellKey = `${row}-${col}`
       if (!cellStyles[cellKey]) cellStyles[cellKey] = {}
-      cellStyles[cellKey].backgroundColor = headerColor
+      cellStyles[cellKey].backgroundColor = baseColor
     }
   }
 
@@ -175,8 +184,8 @@ function calculateExcelCellStyles(gridData: any[][], nodes?: any[]) {
   for (let row = styleStartRow; row <= maxRow; row++) {
     const firstValueCol = colmax[row]
     if (firstValueCol !== undefined) {
-      // テキストがあるセルとその右側のセルには、ヘッダー色と同じ薄い色を使用
-      const headerColor = getHeaderColor(firstValueCol)
+      // テキストがあるセルとその右側のセルには、ノード色由来の薄い色を使用
+      const headerColor = `#${getNodeColor(nodes || [], row, firstValueCol)}`
       
       // テキストがあるセルに背景色を適用（ヘッダー色と同じ薄い色）
       const textCellKey = `${row}-${firstValueCol}`
@@ -250,7 +259,7 @@ export async function exportToExcel(data: ExportData) {
   const { gridData, mapName, template, nodes } = data
 
   try {
-    // VBAロジックでセルスタイルを計算（ノードデータを渡す）
+    // ロジックでセルスタイルを計算（ノードデータを渡す）
     const { cellStyles, maxRow, maxCol } = calculateExcelCellStyles(gridData, nodes)
     
     // Create workbook using ExcelJS
@@ -305,7 +314,7 @@ export async function exportToExcel(data: ExportData) {
           vertical: 'middle'
         }
         
-        // Apply VBA-based styling
+        // Apply styling
         const cellKey = `${rowIndex}-${colIndex}`
         const styleInfo = cellStyles[cellKey]
         
@@ -358,7 +367,7 @@ export async function exportToExcel(data: ExportData) {
     
     // Add metadata to information sheet
     const metaData = [
-      ['LayerPalette Export Information (VBA Logic Applied)'],
+      ['LayerPalette Export Information'],
       [''],
       ['Map Name:', mapName],
       ['Template:', template],
@@ -366,10 +375,10 @@ export async function exportToExcel(data: ExportData) {
       ['Max Row:', maxRow.toString()],
       ['Max Col:', maxCol.toString()],
       [''],
-      ['VBA Logic Implementation:'],
+      ['Export Features:'],
       ['1. Column-wide background colors from header row'],
       ['2. Text cell colors extend to the right'],
-      ['3. Borders applied according to VBA macro rules'],
+      ['3. Borders applied according to styling rules'],
       ['4. Overall border frame around data range'],
       [''],
       ['Border Rules:'],
@@ -412,7 +421,7 @@ export async function exportToExcel(data: ExportData) {
     
     // Create filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
-    const filename = `${mapName}_VBA_${template}_${timestamp}.xlsx`
+    const filename = `${mapName}_${template}_${timestamp}.xlsx`
     
     // Download file using file-saver
     const blob = new Blob([buffer], { 
@@ -427,7 +436,7 @@ export async function exportToExcel(data: ExportData) {
   }
 }
 
-// Simple CSV export as backup option (unchanged)
+// Simple CSV export as backup option
 export function exportToCSV(data: ExportData) {
   const { gridData, mapName, template } = data
   
@@ -435,7 +444,7 @@ export function exportToCSV(data: ExportData) {
     let csvContent = ''
     
     // Add header information
-    csvContent += `LayerPalette Export (VBA Logic)\n`
+    csvContent += `LayerPalette Export\n`
     csvContent += `Map Name:,${mapName}\n`
     csvContent += `Template:,${template}\n`
     csvContent += `Export Date:,${new Date().toLocaleString('ja-JP')}\n`
@@ -468,7 +477,7 @@ export function exportToCSV(data: ExportData) {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
-    const filename = `${mapName}_VBA_${template}_${timestamp}.csv`
+    const filename = `${mapName}_${template}_${timestamp}.csv`
     
     // Create download link
     const url = URL.createObjectURL(blob)

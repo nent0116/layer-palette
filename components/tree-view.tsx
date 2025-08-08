@@ -12,6 +12,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core"
+import { useDroppable } from "@dnd-kit/core"
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
@@ -70,8 +71,9 @@ function SortableTreeItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
+    opacity: isDragging ? 0.6 : 1,
+    willChange: isDragging ? 'transform' : undefined,
+  } as React.CSSProperties
 
   const isSelected = selectedNodeId === node.id
 
@@ -104,20 +106,21 @@ function SortableTreeItem({
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="relative">
       <ContextMenu>
         <ContextMenuTrigger>
           <div
-            className={`group flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer animate-fade-in ${
+            className={`group flex items-center gap-2 p-3 rounded-xl border transition-colors cursor-pointer ${
               isSelected
-                ? "border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-lg"
-                : "border-slate-200 hover:border-indigo-300 hover:bg-gradient-to-r hover:from-slate-50 hover:to-indigo-50"
+                ? "border-indigo-400 bg-indigo-50"
+                : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
             }`}
             style={{ marginLeft: `${level * 20}px` }}
             onClick={() => onNodeSelect(node.id)}
             role="treeitem"
             aria-expanded={node.children.length > 0 ? isExpanded : undefined}
             aria-selected={isSelected}
+            aria-level={level + 1}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -132,11 +135,15 @@ function SortableTreeItem({
               }
             }}
           >
+            <ChildDropTarget id={`child:${node.id}`} />
             {/* Drag Handle */}
             <div
               {...attributes}
               {...listeners}
-              className="opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing p-1 hover:bg-indigo-100 rounded"
+              className="opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing p-1 rounded"
+              role="button"
+              aria-label={`${node.title}をドラッグ`}
+              tabIndex={-1}
             >
               <GripVertical className="w-4 h-4 text-slate-400" />
             </div>
@@ -146,11 +153,13 @@ function SortableTreeItem({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-6 h-6 p-0 hover:bg-indigo-100"
+                className="w-6 h-6 p-0"
                 onClick={(e) => {
                   e.stopPropagation()
                   setIsExpanded(!isExpanded)
                 }}
+                aria-label={isExpanded ? "折りたたむ" : "展開する"}
+                aria-expanded={isExpanded}
               >
                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </Button>
@@ -166,20 +175,20 @@ function SortableTreeItem({
             />
 
             {/* Node Title */}
-            <span className="flex-1 text-sm font-medium text-slate-700 group-hover:text-indigo-700">{node.title}</span>
+            <span className="flex-1 text-sm font-medium text-slate-700">{node.title}</span>
 
             {/* Action Buttons */}
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-              {/* Always show promote button, even for L0 */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-6 h-6 p-0 hover:bg-blue-100"
+                className="w-6 h-6 p-0"
                 onClick={(e) => {
                   e.stopPropagation()
                   handlePromote()
                 }}
                 title="階層を上げる"
+                aria-label="階層を上げる"
               >
                 <ArrowLeft className="w-3 h-3 text-blue-600" />
               </Button>
@@ -187,12 +196,13 @@ function SortableTreeItem({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-6 h-6 p-0 hover:bg-orange-100"
+                  className="w-6 h-6 p-0"
                   onClick={(e) => {
                     e.stopPropagation()
                     handleDemote()
                   }}
                   title="階層を下げる"
+                  aria-label="階層を下げる"
                 >
                   <ArrowRight className="w-3 h-3 text-orange-600" />
                 </Button>
@@ -200,27 +210,30 @@ function SortableTreeItem({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-6 h-6 p-0 hover:bg-emerald-100"
+                className="w-6 h-6 p-0"
                 onClick={handleAddChild}
                 title="子ノードを追加 (Shift+Enter)"
+                aria-label="子ノードを追加"
               >
                 <Plus className="w-3 h-3 text-emerald-600" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-6 h-6 p-0 hover:bg-blue-100"
+                className="w-6 h-6 p-0"
                 onClick={handleAddSibling}
                 title="同階層にノードを追加 (Enter)"
+                aria-label="同階層にノードを追加"
               >
                 <Plus className="w-3 h-3 text-blue-600" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-6 h-6 p-0 hover:bg-red-100"
+                className="w-6 h-6 p-0"
                 onClick={handleDelete}
                 title="削除 (Delete)"
+                aria-label="削除"
               >
                 <Trash2 className="w-3 h-3 text-red-600" />
               </Button>
@@ -228,7 +241,7 @@ function SortableTreeItem({
           </div>
         </ContextMenuTrigger>
 
-        <ContextMenuContent className="animate-scale-in">
+        <ContextMenuContent>
           <ContextMenuItem onClick={handleAddChild}>
             <Plus className="w-4 h-4 mr-2 text-emerald-600" />
             子ノードを追加 (Shift+Enter)
@@ -262,7 +275,7 @@ function SortableTreeItem({
 
       {/* Children */}
       {isExpanded && node.children.length > 0 && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-2" role="group" aria-label={`${node.title}の子ノード`}>
           <SortableContext items={node.children.map((child) => child.id)} strategy={verticalListSortingStrategy}>
             {node.children.map((child) => (
               <SortableTreeItem
@@ -276,11 +289,33 @@ function SortableTreeItem({
                 onNodeCopy={onNodeCopy}
                 onNodeChangeLevel={onNodeChangeLevel}
                 allNodes={allNodes}
-                canPromote={true} // Always allow promote
-                canDemote={true} // Can always demote (will find appropriate parent)
+                canPromote={true}
+                canDemote={true}
               />
             ))}
           </SortableContext>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ChildDropTarget({ id }: { id: string }) {
+  const { isOver, setNodeRef } = useDroppable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`absolute left-0 top-0 h-full w-10 rounded-l-xl transition-colors ${
+        isOver ? 'bg-purple-200/60 ring-2 ring-purple-400/60' : 'bg-transparent'
+      }`}
+      aria-hidden
+    >
+      {isOver && (
+        <div className="absolute inset-y-0 left-1 flex items-center pointer-events-none select-none">
+          <ArrowRight className="w-3 h-3 text-purple-600" />
+          <span className="ml-1 text-[10px] leading-none text-purple-700 font-medium bg-white/80 px-1.5 py-0.5 rounded">
+            子にする
+          </span>
         </div>
       )}
     </div>
@@ -300,7 +335,8 @@ export function TreeView({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        delay: 150,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -311,45 +347,72 @@ export function TreeView({
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event
+      if (!over || active.id === over.id) return
 
-      if (over && active.id !== over.id) {
-        // Find the nodes
-        const findNodeAndParent = (
-          nodes: LayerNode[],
-          nodeId: string,
-          parentId?: string,
-        ): { node: LayerNode; parentId?: string; index: number } | null => {
-          for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i]
-            if (node.id === nodeId) {
-              return { node, parentId, index: i }
-            }
-            const childResult = findNodeAndParent(node.children, nodeId, node.id)
-            if (childResult) return childResult
+      // Find nodes and parents
+      const findNodeAndParent = (
+        nodes: LayerNode[],
+        nodeId: string,
+        parentId?: string,
+      ): { node: LayerNode; parentId?: string; index: number } | null => {
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i]
+          if (node.id === nodeId) {
+            return { node, parentId, index: i }
           }
-          return null
+          const childResult = findNodeAndParent(node.children, nodeId, node.id)
+          if (childResult) return childResult
         }
-
-        const activeResult = findNodeAndParent(nodes, active.id as string)
-        const overResult = findNodeAndParent(nodes, over.id as string)
-
-        if (activeResult && overResult) {
-          // Move the node to the same parent as the target node
-          onNodeMove(active.id as string, overResult.index, overResult.parentId)
-        }
+        return null
       }
+
+      const findNode = (nodes: LayerNode[], nodeId: string): LayerNode | null => {
+        for (const n of nodes) {
+          if (n.id === nodeId) return n
+          const found = findNode(n.children, nodeId)
+          if (found) return found
+        }
+        return null
+      }
+
+      const isDescendant = (possibleAncestorId: string, targetId: string): boolean => {
+        const ancestor = findNode(nodes, possibleAncestorId)
+        if (!ancestor) return false
+        const walk = (node: LayerNode): boolean => {
+          if (node.id === targetId) return true
+          return node.children.some(walk)
+        }
+        return walk(ancestor)
+      }
+
+      const activeResult = findNodeAndParent(nodes, active.id as string)
+      const overResult = findNodeAndParent(nodes, over.id as string)
+      // 子化ドロップゾーンへドロップ
+      if (typeof over.id === 'string' && (over.id as string).startsWith('child:')) {
+        const parentId = (over.id as string).slice('child:'.length)
+        // 自己または子孫への子化は不可
+        if (parentId === active.id || isDescendant(active.id as string, parentId)) return
+        const parentNode = findNode(nodes, parentId)
+        const newOrder = parentNode ? parentNode.children.length : 0
+        onNodeMove(active.id as string, newOrder, parentId)
+        return
+      }
+
+      if (!activeResult || !overResult) return
+
+      // 同一親内のみ並べ替え許可
+      if (activeResult.parentId !== overResult.parentId) return
+
+      // インデックス補正: remove→insert の実装なので、前から後ろへ移動のときは1つ詰まる
+      let targetIndex = overResult.index
+      if (activeResult.index < overResult.index) {
+        targetIndex = Math.max(0, targetIndex - 1)
+      }
+
+      onNodeMove(active.id as string, targetIndex, overResult.parentId)
     },
     [nodes, onNodeMove],
   )
-
-  const getAllNodeIds = (nodes: LayerNode[]): string[] => {
-    const ids: string[] = []
-    nodes.forEach((node) => {
-      ids.push(node.id)
-      ids.push(...getAllNodeIds(node.children))
-    })
-    return ids
-  }
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-indigo-50 border-r-2 border-indigo-100 p-6">
@@ -360,7 +423,7 @@ export function TreeView({
         <Button
           size="sm"
           onClick={() => onNodeAdd()}
-          className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-lg"
+          className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow"
         >
           <Plus className="w-4 h-4 mr-2" />
           追加
@@ -368,7 +431,8 @@ export function TreeView({
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={getAllNodeIds(nodes)} strategy={verticalListSortingStrategy}>
+        {/* ルート階層のみを並べ替え対象にする */}
+        <SortableContext items={nodes.map(n => n.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-3" role="tree" aria-label="階層構造ツリー">
             {nodes.map((node) => (
               <SortableTreeItem
@@ -382,7 +446,7 @@ export function TreeView({
                 onNodeCopy={onNodeCopy}
                 onNodeChangeLevel={onNodeChangeLevel}
                 allNodes={nodes}
-                canPromote={true} // Always allow promote, even for root nodes
+                canPromote={true}
                 canDemote={true}
               />
             ))}
@@ -426,6 +490,9 @@ export function TreeView({
           </div>
           <div>
             <kbd className="px-2 py-1 bg-slate-200 rounded text-xs">Ctrl+Z</kbd> 元に戻す
+          </div>
+          <div>
+            <kbd className="px-2 py-1 bg-slate-200 rounded text-xs">ドラッグ</kbd> 同階層内で並べ替え
           </div>
         </div>
       </div>
